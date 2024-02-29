@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="b49b68ec-b37b-4b7f-a583-199388a6c469" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="f63df3ab-4db3-456a-9988-19bc367a502f" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="mydb" />
+	</db:config>
+	<flow name="errorFlow" doc:id="4291a94d-ea78-4d38-aba1-352e2d98ca39" >
+		<http:listener doc:name="Listener" doc:id="2cbd32c8-26d3-40f6-a0b6-c376468dadeb" config-ref="HTTP_Listener_config" path="error"/>
+		<logger level="INFO" doc:name="Logger" doc:id="9a3a70c6-838d-47df-93a5-ee0130ddc2bb" message="#[payload]"/>
+		<try doc:name="Try" doc:id="551068d0-8601-41ca-8e16-108cb15ac865" >
+			<logger level="INFO" doc:name="Logger" doc:id="809fb6ac-732e-4b24-b868-aa852b2fc81b" message="#[payload]"/>
+			<db:insert doc:name="Insert" doc:id="87db6444-58c0-4ebb-9c8c-f3d2042d385e" config-ref="Database_Config">
+				<db:sql ><![CDATA[insert into]]></db:sql>
+				<db:input-parameters ><![CDATA[#[payload]]]></db:input-parameters>
+			</db:insert>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="b7ec75e3-b781-4de5-b9fb-6aa0520d538a" type="ANY">
+					<ee:transform doc:name="Transform Message" doc:id="614df508-4993-48db-8781-5686f45578c3" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error": "please provide valid login credentials"
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+				</on-error-continue>
+			</error-handler>
+		</try>
+		<logger level="INFO" doc:name="Logger" doc:id="cd84e4ac-a49a-40ec-a134-5fc22947b407" message="end"/>
+	</flow>
+</mule>
